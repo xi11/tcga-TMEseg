@@ -27,7 +27,7 @@ args = parser.parse_args()
 
 ######step1: generate growth pattern for tiles
 generate_tme(datapath=args.data_dir, save_dir=args.save_dir, file_pattern=args.file_name_pattern, color_norm=args.color_norm, nfile=args.nfile,
-            patch_size=384, patch_stride=192, nClass=6)
+            patch_size=768, patch_stride=192, nClass=6)
 
 #######step2: stich to ss1 level
 ss1_stich(cws_folder=args.data_dir, annotated_dir=args.save_dir, output_dir=args.save_dir_ss1,  nfile=args.nfile, file_pattern=args.file_name_pattern)
