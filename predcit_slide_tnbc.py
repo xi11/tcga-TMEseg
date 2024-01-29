@@ -43,6 +43,7 @@ class_colors5 = [(0, 0, 0), (255, 0, 0), (255, 0, 255), (0, 0, 128), (0, 255, 25
 class_colors2 = [(0, 0, 0), (255, 255, 255)]
 class_colors6 = [(0, 0, 0), (0, 255, 0), (255, 0, 255), (0, 0, 128), (255, 255, 0), (0, 128, 128)]
 class_colors_tcga = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128)]
+class_colors8 = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128), (255, 255, 0), (255, 0, 0)]
 
 # tumor	1
 # stroma	2
@@ -280,15 +281,15 @@ class Patches:
         return image
 
 
-model=load_model(r'TMElung_artemis_tcga_sum12_e50_sCE_img768x20.h5', custom_objects={'tf': tf}, compile=False)
+model=load_model(r'TMElung_artemisTcgaAll_sum12_e60_sCE_img768x20.h5', custom_objects={'tf': tf}, compile=False)
 #model.summary()
-save_dir = r'T:\project\tcga_tnbc\tmeseg_tcga20x384finetune\mask_cws_norm'
+save_dir = r'T:\project\tcga_tnbc\tmeseg_artemisTcgaAll20x384finetune\mask_cws'
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
     #os.makedirs(os.path.join(save_dir, 'mask_cws'))
 
 datapath = r'T:\project\tcga_tnbc\til\1_cws_tiling'
-files = sorted(glob(os.path.join(datapath, 'TCGA-E9-A5FL*.svs')))
+files = sorted(glob(os.path.join(datapath, '*.svs')))
 
 for file in files:
     file_name = os.path.basename(file)
@@ -303,8 +304,8 @@ for file in files:
     for im_f in imgs:
         img_name = os.path.splitext(os.path.basename(im_f))[0]
         if not os.path.exists(os.path.join(save_dir_file, img_name + '.png')):
-            #testImgc = np.array(Image.open(im_f))
-            testImgc = pre_process_images(np.array(Image.open(im_f)))
+            testImgc = np.array(Image.open(im_f))
+            #testImgc = pre_process_images(np.array(Image.open(im_f)))
             patch_obj = Patches(img_patch_h=384, img_patch_w=384, stride_h=192, stride_w=192, label_patch_h=384,
                                 label_patch_w=384)
 
@@ -319,7 +320,7 @@ for file in files:
             #merge_output = post_processing(merge_output)
 
 
-            seg_mask = get_colored_segmentation_image(merge_output, 6, colors=class_colors_tcga)
+            seg_mask = get_colored_segmentation_image(merge_output, 8, colors=class_colors8)
             cv2.imwrite(os.path.join(save_dir_file, img_name + '.png'), seg_mask)
     # pix_slide.append(pix_cat_count_all)
         else:

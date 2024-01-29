@@ -23,6 +23,7 @@ def to_categorical_mask(multi_label, nClasses):
 #openCV: BGR
 class_colors5 = [(0, 0, 0), (255, 0, 0), (255, 0, 255), (0, 0, 128), (0, 255, 255), (0, 0, 255)]
 class_colors_tcga = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128)]
+class_colors8 = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128), (255, 255, 0), (255, 0, 0)]
 
 def get_colored_segmentation_image(seg_arr, n_classes, colors=class_colors5):
     output_height = seg_arr.shape[0]
@@ -252,7 +253,7 @@ class Patches:
 
 
 def generate_tme(datapath, save_dir, file_pattern='*.svs', nfile=0, patch_size=384, patch_stride=192, nClass=2, color_norm=True):
-    model = load_model('TMElung_artemis_tcga_sum12_e50_sCE_img768x20.h5', custom_objects={'tf': tf}, compile=False)
+    model = load_model('TMElung_artemisTcgaAll_sum12_e60_sCE_img768x20.h5', custom_objects={'tf': tf}, compile=False)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     files = sorted(glob(os.path.join(datapath, file_pattern)))[nfile]
@@ -282,7 +283,7 @@ def generate_tme(datapath, save_dir, file_pattern='*.svs', nfile=0, patch_size=3
             merge_output = patch_obj.merge_patches(outData)
             merge_output = merge_output.argmax(axis=2)
             #merge_output = post_processing(merge_output)
-            seg_mask = get_colored_segmentation_image(merge_output, nClass, colors=class_colors_tcga)
+            seg_mask = get_colored_segmentation_image(merge_output, nClass, colors=class_colors8)
             cv2.imwrite(os.path.join(save_dir_file, img_name + '.png'), seg_mask)
         else:
             print('Already Processed %s\n' % os.path.join(save_dir_file, img_name + '.png'))

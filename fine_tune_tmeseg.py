@@ -43,10 +43,10 @@ tf.random.set_seed(2023)
 rn.seed(2023)
 
 # Step 0: load new dataset
-input_dir = r'T:\project\tcga_tnbc\public_train\patch1536\image'
-target_dir = r'T:\project\tcga_tnbc\public_train\patch1536\maskPng'
+input_dir = r'T:\project\tcga_tnbc\public_train\patch768_384\image'
+target_dir = r'T:\project\tcga_tnbc\public_train\patch768_384\maskPng'
 img_size = (384, 384)
-nClasses = 6
+nClasses = 8
 batch_size = 8
 
 
@@ -122,8 +122,8 @@ def data_generator(image_generator_c, mask_generator, nClasses=2):
         yield (image_generator_c.next(), tf.one_hot(tf.cast(tf.squeeze(mask_generator.next(), axis=3), dtype=tf.int32), nClasses))
 
 # Step 1: Load the pre-trained model
-pretrained_model=load_model(r'artemis_tme_sum12_e50_sCE_img768_penmark636.h5', custom_objects={'tf': tf}, compile=False)
-modelpath = "TMElung_artemis_tcga_sum12_e50_sCE_img1536x10" + ".h5"
+pretrained_model=load_model(r'T:\pipelines\artemis\artemis_tme_sum12_e50_sCE_img768_penmark636.h5', custom_objects={'tf': tf}, compile=False)
+modelpath = "TMElung_artemisTcgaAll_sum12_e60_sCE_img768x20" + ".h5"
 # Step 2: Replace the top layers (if necessary)
 o = pretrained_model.layers[-2].output
 o = Dense(nClasses, activation='softmax')(o)
