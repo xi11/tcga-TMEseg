@@ -70,7 +70,7 @@ def selfCrossPooling(n_classes, img_c):
     x2 = layers.BatchNormalization()(x2)
     x2 = layers.Activation('relu')(x2)
 
-    pool_factor = [2, 3, 6, 12]
+    pool_factor = [1, 2, 3, 6]
 
     pool_out1 = [x1]
     for p in pool_factor:

@@ -281,9 +281,9 @@ class Patches:
         return image
 
 
-model=load_model(r'TMElung_artemisTcgaAll_sum12_e60_sCE_img768x20.h5', custom_objects={'tf': tf}, compile=False)
+model=load_model(r'TMElung_artemisTcgaAll_K8_img768x20penmark.h5', custom_objects={'tf': tf}, compile=False)
 #model.summary()
-save_dir = r'T:\project\tcga_tnbc\tmeseg_artemisTcgaAll20x384finetune\mask_cws'
+save_dir = r'T:\project\tcga_tnbc\tmeseg_K8artemisTcgaAll20x384finetune\mask_cws'
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
     #os.makedirs(os.path.join(save_dir, 'mask_cws'))

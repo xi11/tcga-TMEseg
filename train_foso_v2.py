@@ -27,7 +27,7 @@ tf.compat.v1.reset_default_graph()
 
 if os.name == 'nt':
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 np.random.seed(2023)
 tf.random.set_seed(2023)
@@ -64,10 +64,10 @@ def random_adjust_saturation(image, min_delta=0.8, max_delta=2.0, max_delta_hue=
     image = tf.clip_by_value(image, clip_value_min=0.0, clip_value_max=1.0)
     return image
 
-input_dir = r'T:\project\tcga_tnbc\public_train\patch1536\image'
-target_dir = r'T:\project\tcga_tnbc\public_train\patch1536\maskPng'
+input_dir = r'T:\project\tcga_tnbc\public_train\patch768_tcga20x\image'
+target_dir = r'T:\project\tcga_tnbc\public_train\patch768_tcga20x\maskPng'
 img_size = (384, 384)
-nClasses = 6
+nClasses = 8
 batch_size = 8
 
 
@@ -162,7 +162,7 @@ categorical_focal_dice_loss = ['sparse_categorical_crossentropy']
 stromaPSmodel.compile(optimizer=adam, loss=categorical_focal_dice_loss,
                          metrics='sparse_categorical_accuracy') #sample_weight_mode="temporal",
 
-modelpath = "TMEseg_tcgaScratch10x_resnetby2_sum12_e5060_sCE" + ".h5"  #train: using training set percentage, otherwise, using ALL
+modelpath = "TMEseg_tcgaScratch20x_resnetby2_sum6_e5060_sCE" + ".h5"  #train: using training set percentage, otherwise, using ALL
 callbacks = [LearningRateScheduler(scheduler)]
 
 
