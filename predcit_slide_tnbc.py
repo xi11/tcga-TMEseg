@@ -281,15 +281,15 @@ class Patches:
         return image
 
 
-model=load_model(r'TMElung_artemisTcgaAll_K8_img768x20penmark.h5', custom_objects={'tf': tf}, compile=False)
+model=load_model(r'.\model\TMElung_artemisTcgaAll_div12v2_K8_img768x20penmark.h5', custom_objects={'tf': tf}, compile=False)
 #model.summary()
-save_dir = r'T:\project\tcga_tnbc\tmeseg_K8artemisTcgaAll20x384finetune\mask_cws'
+save_dir = r'Z:\TIER2\mpr_frank\mpr2582\tmesegproDiv12\mask_cws'
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
     #os.makedirs(os.path.join(save_dir, 'mask_cws'))
 
-datapath = r'T:\project\tcga_tnbc\til\1_cws_tiling'
-files = sorted(glob(os.path.join(datapath, '*.svs')))
+datapath = r'Z:\TIER2\mpr_frank\mpr2582\til\1_cws_tiling'
+files = sorted(glob(os.path.join(datapath, '*45.svs')))
 
 for file in files:
     file_name = os.path.basename(file)

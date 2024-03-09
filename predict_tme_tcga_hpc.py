@@ -253,7 +253,7 @@ class Patches:
 
 
 def generate_tme(datapath, save_dir, file_pattern='*.svs', nfile=0, patch_size=384, patch_stride=192, nClass=2, color_norm=True):
-    model = load_model('./model/TMElung_artemisTcgaAll_div12v2_K8_img768x20penmark.h5', custom_objects={'tf': tf}, compile=False)
+    model = load_model('./model/TMElung_Tcga_div6_K8_x10penmark.h5', custom_objects={'tf': tf}, compile=False)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     files = sorted(glob(os.path.join(datapath, file_pattern)))[nfile]
