@@ -4,24 +4,26 @@
 #BSUB -o /rsrch5/scratch/trans_mol_path/xpan7/pipelines/logs/%J_lsf.out
 #BSUB -e /rsrch5/scratch/trans_mol_path/xpan7/pipelines/logs/%J_lsf.err
 #BSUB -q medium
-#BSUB -n 4
-#BSUB -M 16
-#BSUB -R rusage[mem=16]
-#BSUB -B
-#BSUB -N
-#BSUB -J "tmeseg[1-120:1]"
+#BSUB -n 16
+#BSUB -M 96
+#BSUB -R rusage[mem=96]
+#BSUB -J "tmeseg[1-2:1]"
 
 
 module load anaconda3/2023.07-2
 eval "$(/risapps/rhel8/anaconda3/2023.07-2/bin/conda shell.bash hook)"  #seadragon2
 # eval "$(/risapps/rhel7/anaconda3/2023.07-2/bin/conda shell.bash hook)"     #seadragon1
-conda activate /rsrch5/home/trans_mol_path/xpan7/.conda/envs/tfCPU2p5
+conda activate /rsrch5/home/trans_mol_path/xpan7/.conda/envs/tfCPU2p10
 
-data_dir=/rsrch5/scratch/trans_mol_path/xpan7/project/tcga_tnbc/til/1_cws_tiling
-output_dir=/rsrch5/scratch/trans_mol_path/xpan7/project/tcga_tnbc/tmeseg_tcga20x384finetune/mask_cws_norm
-ss1_dir=/rsrch5/scratch/trans_mol_path/xpan7/project/tcga_tnbc/tmeseg_tcga20x384finetune/mask_ss1_norm
-file_name_pattern='*.svs'
-color_norm=true
+data_dir=/rsrch6/home/trans_mol_path/yuan_lab/public_data/single_cell_trans/AI_results/Xenium/result/1_cws_tiling
+output_dir=/rsrch6/home/trans_mol_path/yuan_lab/public_data/single_cell_trans/AI_results/Xenium/result/mit-b3-finetuned-tmeTCGAbrcaLUAD-e60-lr00001-s512-20x768-10x512rere/mask_cws768
+ss1_dir=/rsrch6/home/trans_mol_path/yuan_lab/public_data/single_cell_trans/AI_results/Xenium/result/mit-b3-finetuned-tmeTCGAbrcaLUAD-e60-lr00001-s512-20x768-10x512rere/mask_ss1768
+file_name_pattern='*.tif'
+color_norm=false
+patch_size=768
+input_size=512 # 512for segformer
+nClass=9
+scale=0.125
 
 # set the color normalization flag, if applicable
 if [ "$color_norm" = true ]; then
@@ -30,4 +32,4 @@ else
     color_norm_args='-c'
 fi
 
-python main_tme.py -d "$data_dir" -o "$output_dir" -s "$ss1_dir" -p "$file_name_pattern" $color_norm_args -n $((LSB_JOBINDEX-1))
+python main_tme.py -d "$data_dir" -o "$output_dir" -s "$ss1_dir" -p "$file_name_pattern" $color_norm_args -ps $patch_size -ins $input_size -nC $nClass -n $((LSB_JOBINDEX-1)) -sf $scale
