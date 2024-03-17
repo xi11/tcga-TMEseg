@@ -23,7 +23,7 @@ def to_categorical_mask(multi_label, nClasses):
 #openCV: BGR
 class_colors5 = [(0, 0, 0), (255, 0, 0), (255, 0, 255), (0, 0, 128), (0, 255, 255), (0, 0, 255)]
 class_colors_tcga = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128)]
-class_colors8 = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128), (255, 255, 0), (255, 0, 0)]
+class_colors8 = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128), (255, 255, 0), (255, 0, 0), (0, 128, 0)]
 
 def get_colored_segmentation_image(seg_arr, n_classes, colors=class_colors5):
     output_height = seg_arr.shape[0]
@@ -83,7 +83,7 @@ def post_processing(mergeData1):
 
 
 class Patches:
-    def __init__(self, img_patch_h, img_patch_w, stride_h=384, stride_w=384, label_patch_h=None, label_patch_w=None):
+    def __init__(self, img_patch_h, img_patch_w, stride_h=384, stride_w=384, label_patch_h=None, label_patch_w=None, input_size=384):
         assert img_patch_h > 0, 'Height of Image Patch should be greater than 0'
         assert img_patch_w > 0, 'Width of Image Patch should be greater than 0'
         assert label_patch_h > 0, 'Height of Label Patch should be greater than 0'
@@ -98,6 +98,7 @@ class Patches:
         self.img_patch_w = img_patch_w
         self.stride_h = stride_h
         self.stride_w = stride_w
+        self.input_size = input_size
         self.label_patch_h = label_patch_h
         self.label_patch_w = label_patch_w
         self.img_h = None
@@ -133,6 +134,7 @@ class Patches:
 
         img_patch_h = self.img_patch_h
         img_patch_w = self.img_patch_w
+        input_size = self.input_size
 
         stride_h = self.stride_h
         stride_w = self.stride_w
@@ -162,7 +164,7 @@ class Patches:
         num_patches_img = self.num_patches_img_h*self.num_patches_img_w
         self.num_patches_img = num_patches_img
         iter_tot = 0
-        img_patches = np.zeros((num_patches_img, 384, 384, image.shape[2]), dtype=image.dtype)
+        img_patches = np.zeros((num_patches_img, input_size, input_size, image.shape[2]), dtype=image.dtype)
         #label_patches = np.zeros((num_patches_img, label_patch_h, label_patch_w), dtype=image.dtype)
         for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
             for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
@@ -179,7 +181,7 @@ class Patches:
                     end_w = img_w
 
 
-                img_patches[iter_tot, :, :, :] = cv2.resize(image[start_h:end_h, start_w:end_w, :], (384, 384))
+                img_patches[iter_tot, :, :, :] = cv2.resize(image[start_h:end_h, start_w:end_w, :], (input_size, input_size))
                 #label_patches[iter_tot, :, :] = label[start_h:end_h, start_w:end_w]
                 iter_tot += 1
 
@@ -252,8 +254,8 @@ class Patches:
         return image
 
 
-def generate_tme(datapath, save_dir, file_pattern='*.svs', nfile=0, patch_size=384, patch_stride=192, nClass=2, color_norm=True):
-    model = load_model('./model/TMElung_Tcga_div6_K8_x10penmark.h5', custom_objects={'tf': tf}, compile=False)
+def generate_tme(datapath, save_dir, file_pattern='*.svs', nfile=0, patch_size=384, patch_stride=192, input_size=384, nClass=2, color_norm=True):
+    model = load_model('./model/TMElung_TcgaBRCALUAD_div6_K8_x20penmark_by2.h5', custom_objects={'tf': tf}, compile=False)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     files = sorted(glob(os.path.join(datapath, file_pattern)))[nfile]
@@ -272,8 +274,9 @@ def generate_tme(datapath, save_dir, file_pattern='*.svs', nfile=0, patch_size=3
             if color_norm:
                 print('color normalization')
                 testImgc = pre_process_images(testImgc)
+            patch_stride = np.int32(patch_stride)
             patch_obj = Patches(img_patch_h=patch_size, img_patch_w=patch_size, stride_h=patch_stride, stride_w=patch_stride, label_patch_h=patch_size,
-                                label_patch_w=patch_size)
+                                label_patch_w=patch_size, input_size=input_size)
             testData_c = patch_obj.extract_patches_img_label(testImgc)
             testData_c = testData_c.astype(np.float32)
             testData_c = testData_c / 255.0

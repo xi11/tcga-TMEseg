@@ -6,15 +6,25 @@ from PIL import Image
 import platform
 import math
 from glob import glob
-from transformers import TFAutoModelForSemanticSegmentation
+import matplotlib
+import matplotlib.pyplot as plt
 import tensorflow as tf
 import pandas as pd
-
+from tensorflow.keras.models import load_model
 
 
 
 # %%
 # Loss function
+
+if platform.system() == 'Darwin':
+    matplotlib.use('MacOSX')
+
+if os.name == 'nt':
+    os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+
 
 
 def to_categorical_mask(multi_label, nClasses):
@@ -33,7 +43,7 @@ class_colors5 = [(0, 0, 0), (255, 0, 0), (255, 0, 255), (0, 0, 128), (0, 255, 25
 class_colors2 = [(0, 0, 0), (255, 255, 255)]
 class_colors6 = [(0, 0, 0), (0, 255, 0), (255, 0, 255), (0, 0, 128), (255, 255, 0), (0, 128, 128)]
 class_colors_tcga = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128)]
-class_colors8 = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128), (255, 255, 0), (255, 0, 0), (0, 128, 0)]
+class_colors8 = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128), (255, 255, 0), (255, 0, 0)]
 
 # tumor	1
 # stroma	2
@@ -86,6 +96,20 @@ def norm_reinhard(source_image, mt, stdt):
         norm_lab[:, :, 2] = ((norm_lab[:, :, 2] - ms[2]) * (stdt[2] / stds[2])) + mt[2]
         norm_image = cv2.cvtColor(norm_lab, cv2.COLOR_Lab2RGB)
     return norm_image
+
+
+def post_processing(mergeData1):
+    mergeData7 = to_categorical_mask(mergeData1, 6)
+    mergeData7[:,:,0] = 0
+    for i in range(1, mergeData7.shape[2]):
+        bin_label = np.ascontiguousarray(np.uint8(mergeData7[:,:,i] > 0))
+        #strel = np.uint8(np.fromfunction(lambda x, y: (x - 4) ** 2 + (y - 4) ** 2 < 9, (7, 7), dtype=int))
+        #bin_label = cv2.dilate(bin_label, strel)
+        _, cc_label, stats, _ = cv2.connectedComponentsWithStats(bin_label)
+        mergeData7[:,:,i] = (stats[cc_label, cv2.CC_STAT_AREA] >= 1600) & (cc_label != 0)
+        mergeData1 = mergeData7.argmax(axis=2)
+    return mergeData1
+
 
 class Patches:
     def __init__(self, img_patch_h, img_patch_w, stride_h=384, stride_w=384, label_patch_h=None, label_patch_w=None):
@@ -167,7 +191,7 @@ class Patches:
         num_patches_img = self.num_patches_img_h*self.num_patches_img_w
         self.num_patches_img = num_patches_img
         iter_tot = 0
-        img_patches = np.zeros((num_patches_img, 512, 512, image.shape[2]), dtype=image.dtype)
+        img_patches = np.zeros((num_patches_img, 384, 384, image.shape[2]), dtype=image.dtype)
         #label_patches = np.zeros((num_patches_img, label_patch_h, label_patch_w), dtype=image.dtype)
         for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
             for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
@@ -184,7 +208,7 @@ class Patches:
                     end_w = img_w
 
 
-                img_patches[iter_tot, :, :, :] = cv2.resize(image[start_h:end_h, start_w:end_w, :], (512, 512))
+                img_patches[iter_tot, :, :, :] = cv2.resize(image[start_h:end_h, start_w:end_w, :], (384, 384))
                 #label_patches[iter_tot, :, :] = label[start_h:end_h, start_w:end_w]
                 iter_tot += 1
 
@@ -257,16 +281,16 @@ class Patches:
         return image
 
 
-#segformer
-model_checkpoint = r'W:\pipelines\TMEseg_tcga\model\mit-b3-finetuned-tmeTCGAbrcaLUAD-e60-lr00001-s512-20x768-10x512rere'
-model = TFAutoModelForSemanticSegmentation.from_pretrained(model_checkpoint)
-save_dir = r'Z:\TIER2\anthracosis\never_smoker_multi\mit-b3-finetuned-tmeTCGAbrcaLUAD-e60-lr00001-s512-20x768-10x512rere\mask_cws768'
+model=load_model(r'.\model\TMElung_artemisTcgaAll_div12v2_K8_img768x20penmark.h5', custom_objects={'tf': tf}, compile=False)
+#model.summary()
+save_dir = r'Z:\TIER2\mpr_frank\mpr2582\tmesegproDiv12\mask_cws'
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
+    #os.makedirs(os.path.join(save_dir, 'mask_cws'))
 
-datapath = r'Z:\TIER2\anthracosis\never_smoker_multi\1_cws_tiling'
-files = sorted(glob(os.path.join(datapath, '*.svs')))[:25]
-patch_size = 768
+datapath = r'Z:\TIER2\mpr_frank\mpr2582\til\1_cws_tiling'
+files = sorted(glob(os.path.join(datapath, '*45.svs')))
+
 for file in files:
     file_name = os.path.basename(file)
     print(file_name)
@@ -278,30 +302,27 @@ for file in files:
 
     imgs = sorted(glob(os.path.join(test_img_dir, 'Da*')))
     for im_f in imgs:
-        tf.keras.backend.clear_session()
-        tf.compat.v1.reset_default_graph()
         img_name = os.path.splitext(os.path.basename(im_f))[0]
         if not os.path.exists(os.path.join(save_dir_file, img_name + '.png')):
             testImgc = np.array(Image.open(im_f))
             #testImgc = pre_process_images(np.array(Image.open(im_f)))
-            patch_obj = Patches(img_patch_h=patch_size, img_patch_w=patch_size, stride_h=384, stride_w=384, label_patch_h=patch_size,
-                                label_patch_w=patch_size)
+            patch_obj = Patches(img_patch_h=384, img_patch_w=384, stride_h=192, stride_w=192, label_patch_h=384,
+                                label_patch_w=384)
 
             testData_c = patch_obj.extract_patches_img_label(testImgc)
             testData_c = testData_c.astype(np.float32)
             testData_c = testData_c / 255.0
-            testData_c = tf.transpose(testData_c, (0, 3, 1, 2))
 
-            outData = model.predict(testData_c, batch_size=8)
-            logit_temp = np.array(tf.transpose(outData.logits, (0, 2, 3, 1)))
-            merge_output = patch_obj.merge_patches(logit_temp)
+            outData = model.predict(testData_c)
+            ##outData = outData.reshape((-1, 384, 384, 7))
+            merge_output = patch_obj.merge_patches(outData)
             merge_output = merge_output.argmax(axis=2)
+            #merge_output = post_processing(merge_output)
 
-            seg_mask = get_colored_segmentation_image(merge_output, 9, colors=class_colors8)
-            seg_mask = cv2.resize(seg_mask, (testImgc.shape[1], testImgc.shape[0]), interpolation=cv2.INTER_NEAREST)
+
+            seg_mask = get_colored_segmentation_image(merge_output, 8, colors=class_colors8)
             cv2.imwrite(os.path.join(save_dir_file, img_name + '.png'), seg_mask)
-            tf.keras.backend.clear_session()
-            tf.compat.v1.reset_default_graph()
+    # pix_slide.append(pix_cat_count_all)
         else:
             print('Already Processed %s\n' % os.path.join(save_dir_file, img_name + '.png'))
 

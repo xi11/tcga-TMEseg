@@ -32,7 +32,7 @@ class_colors5 = [(0, 0, 0), (255, 0, 0), (255, 0, 255), (0, 0, 128), (0, 255, 25
 class_colors2 = [(0, 0, 0), (255, 255, 255)]
 class_colors6 = [(0, 0, 0), (0, 255, 0), (255, 0, 255), (0, 0, 128), (255, 255, 0), (0, 128, 128)]
 class_colors_tcga = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128)]
-class_colors8 = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128), (255, 255, 0), (255, 0, 0)]
+class_colors8 = [(0, 0, 0), (0, 0, 128), (0, 255, 255), (0, 0, 255),(255, 0, 255),(0, 128, 128), (255, 255, 0), (255, 0, 0), (0, 128, 0)]
 
 # tumor	1
 # stroma	2
@@ -87,7 +87,7 @@ def norm_reinhard(source_image, mt, stdt):
     return norm_image
 
 class Patches:
-    def __init__(self, img_patch_h, img_patch_w, stride_h=384, stride_w=384, label_patch_h=None, label_patch_w=None):
+    def __init__(self, img_patch_h, img_patch_w, stride_h=384, stride_w=384, label_patch_h=None, label_patch_w=None, input_size=384):
         assert img_patch_h > 0, 'Height of Image Patch should be greater than 0'
         assert img_patch_w > 0, 'Width of Image Patch should be greater than 0'
         assert label_patch_h > 0, 'Height of Label Patch should be greater than 0'
@@ -104,6 +104,7 @@ class Patches:
         self.stride_w = stride_w
         self.label_patch_h = label_patch_h
         self.label_patch_w = label_patch_w
+        self.input_size = input_size
         self.img_h = None
         self.img_w = None
         self.img_d = None
@@ -137,6 +138,7 @@ class Patches:
 
         img_patch_h = self.img_patch_h
         img_patch_w = self.img_patch_w
+        input_size = self.input_size
 
         stride_h = self.stride_h
         stride_w = self.stride_w
@@ -166,7 +168,7 @@ class Patches:
         num_patches_img = self.num_patches_img_h*self.num_patches_img_w
         self.num_patches_img = num_patches_img
         iter_tot = 0
-        img_patches = np.zeros((num_patches_img, img_patch_h, img_patch_w, image.shape[2]), dtype=image.dtype)
+        img_patches = np.zeros((num_patches_img, input_size, input_size, image.shape[2]), dtype=image.dtype)
         #label_patches = np.zeros((num_patches_img, label_patch_h, label_patch_w), dtype=image.dtype)
         for h in range(int(math.ceil((img_h - img_patch_h) / stride_h + 1))):
             for w in range(int(math.ceil((img_w - img_patch_w) / stride_w + 1))):
@@ -183,8 +185,7 @@ class Patches:
                     end_w = img_w
 
 
-                img_patches[iter_tot, :, :, :] = image[start_h:end_h, start_w:end_w, :]
-                #label_patches[iter_tot, :, :] = label[start_h:end_h, start_w:end_w]
+                img_patches[iter_tot, :, :, :] = cv2.resize(image[start_h:end_h, start_w:end_w, :], (input_size, input_size))
                 iter_tot += 1
 
         return img_patches
@@ -257,9 +258,9 @@ class Patches:
 
 
 
-def generate_tme(datapath, save_dir, file_pattern='*.svs', nfile=0, patch_size=384, patch_stride=192, nClass=2, color_norm=True):
+def generate_tme(datapath, save_dir, file_pattern='*.svs', nfile=0, patch_size=384, patch_stride=192, input_size=384, nClass=2, color_norm=True):
     # segformer
-    model_checkpoint = r'./model/mit-b3-finetuned-tmeTCGA-60-lr00001-s512-20x768'
+    model_checkpoint = r'./model/mit-b3-finetuned-tmeTCGAbrcaLUAD-e60-lr00001-s512-20x768-10x512rere'  #final model
     model = TFAutoModelForSemanticSegmentation.from_pretrained(model_checkpoint)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -279,14 +280,15 @@ def generate_tme(datapath, save_dir, file_pattern='*.svs', nfile=0, patch_size=3
             if color_norm:
                 print('color normalization')
                 testImgc = pre_process_images(testImgc)
+            patch_stride = np.int32(patch_stride)
             patch_obj = Patches(img_patch_h=patch_size, img_patch_w=patch_size, stride_h=patch_stride, stride_w=patch_stride, label_patch_h=patch_size,
-                                label_patch_w=patch_size)
+                                label_patch_w=patch_size, input_size=input_size)
             testData_c = patch_obj.extract_patches_img_label(testImgc)
             testData_c = testData_c.astype(np.float32)
             testData_c = testData_c / 255.0
             testData_c = tf.transpose(testData_c, (0, 3, 1, 2))
 
-            outData = model.predict(testData_c)
+            outData = model.predict(testData_c, batch_size=8)
             logit_temp = np.array(tf.transpose(outData.logits, (0, 2, 3, 1)))
             merge_output = patch_obj.merge_patches(logit_temp)
             merge_output = merge_output.argmax(axis=2)
